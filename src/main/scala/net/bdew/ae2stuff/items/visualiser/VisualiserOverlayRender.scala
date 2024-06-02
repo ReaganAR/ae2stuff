@@ -226,50 +226,52 @@ object VisualiserOverlayRender extends WorldOverlayRenderer {
     if (Client.player != null) {
       val stack = Client.player.inventory.getCurrentItem
       if (stack != null && stack.getItem == ItemVisualiser) {
+        val networkDim = stack.getTagCompound.getInteger("dim")
+        if (networkDim == Client.world.provider.dimensionId) {
+          val mode = ItemVisualiser.getMode(stack)
 
-        val mode = ItemVisualiser.getMode(stack)
+          GL11.glPushAttrib(GL11.GL_ENABLE_BIT)
 
-        GL11.glPushAttrib(GL11.GL_ENABLE_BIT)
+          GL11.glDisable(GL11.GL_LIGHTING)
+          GL11.glDisable(GL11.GL_TEXTURE_2D)
+          GL11.glDisable(GL11.GL_DEPTH_TEST)
 
-        GL11.glDisable(GL11.GL_LIGHTING)
-        GL11.glDisable(GL11.GL_TEXTURE_2D)
-        GL11.glDisable(GL11.GL_DEPTH_TEST)
+          if (needListRefresh) {
+            needListRefresh = false
+            GL11.glNewList(staticList, GL11.GL_COMPILE)
 
-        if (needListRefresh) {
-          needListRefresh = false
-          GL11.glNewList(staticList, GL11.GL_COMPILE)
+            if (renderNodesModes.contains(mode))
+              renderNodes()
 
-          if (renderNodesModes.contains(mode))
-            renderNodes()
+            GL11.glEnable(GL11.GL_LINE_SMOOTH)
+            GL11.glHint(GL11.GL_LINE_SMOOTH_HINT, GL11.GL_NICEST)
 
-          GL11.glEnable(GL11.GL_LINE_SMOOTH)
-          GL11.glHint(GL11.GL_LINE_SMOOTH_HINT, GL11.GL_NICEST)
+            if (renderLinksModes.contains(mode)) {
+              renderLinks(dense, 16f, mode == VisualisationModes.P2P)
+              renderLinks(normal, 4f, mode == VisualisationModes.P2P)
+            }
 
-          if (renderLinksModes.contains(mode)) {
-            renderLinks(dense, 16f, mode == VisualisationModes.P2P)
-            renderLinks(normal, 4f, mode == VisualisationModes.P2P)
+            GL11.glEndList()
           }
 
-          GL11.glEndList()
-        }
+          GL11.glCallList(staticList)
 
-        GL11.glCallList(staticList)
+          // Labels are rendered every frame because they need to face the camera
 
-        // Labels are rendered every frame because they need to face the camera
-
-        if (mode == VisualisationModes.FULL) {
-          for (link <- currentLinks.links if link.channels > 0) {
-            OverlayRenderHandler.renderFloatingText(
-              link.channels.toString,
-              (link.node1.x + link.node2.x) / 2d + 0.5d,
-              (link.node1.y + link.node2.y) / 2d + 0.5d,
-              (link.node1.z + link.node2.z) / 2d + 0.5d,
-              0xffffff
-            )
+          if (mode == VisualisationModes.FULL) {
+            for (link <- currentLinks.links if link.channels > 0) {
+              OverlayRenderHandler.renderFloatingText(
+                link.channels.toString,
+                (link.node1.x + link.node2.x) / 2d + 0.5d,
+                (link.node1.y + link.node2.y) / 2d + 0.5d,
+                (link.node1.z + link.node2.z) / 2d + 0.5d,
+                0xffffff
+              )
+            }
           }
-        }
 
-        GL11.glPopAttrib()
+          GL11.glPopAttrib()
+        }
       }
     }
   }
